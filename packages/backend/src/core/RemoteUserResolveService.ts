@@ -10,7 +10,7 @@ import type Logger from '@/logger.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import { WebfingerService } from '@/core/WebfingerService.js';
 import { RemoteLoggerService } from '@/core/RemoteLoggerService.js';
-import { ApPersonService } from '@/core/activitypub/models/ApPersonService.js';
+import { ApActorService } from '@/core/activitypub/models/ApActorService.js';
 import { bindThis } from '@/decorators.js';
 
 @Injectable()
@@ -27,7 +27,7 @@ export class RemoteUserResolveService {
 		private utilityService: UtilityService,
 		private webfingerService: WebfingerService,
 		private remoteLoggerService: RemoteLoggerService,
-		private apPersonService: ApPersonService,
+		private apPersonService: ApActorService,
 	) {
 		this.logger = this.remoteLoggerService.logger.createSubLogger('resolve-user');
 	}

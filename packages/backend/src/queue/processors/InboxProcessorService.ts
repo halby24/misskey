@@ -18,7 +18,7 @@ import type { UserPublickey } from '@/models/entities/UserPublickey.js';
 import { ApDbResolverService } from '@/core/activitypub/ApDbResolverService.js';
 import { StatusError } from '@/misc/status-error.js';
 import { UtilityService } from '@/core/UtilityService.js';
-import { ApPersonService } from '@/core/activitypub/models/ApPersonService.js';
+import { ApActorService } from '@/core/activitypub/models/ApActorService.js';
 import { LdSignatureService } from '@/core/activitypub/LdSignatureService.js';
 import { ApInboxService } from '@/core/activitypub/ApInboxService.js';
 import { bindThis } from '@/decorators.js';
@@ -48,7 +48,7 @@ export class InboxProcessorService {
 		private fetchInstanceMetadataService: FetchInstanceMetadataService,
 		private ldSignatureService: LdSignatureService,
 		private apRequestService: ApRequestService,
-		private apPersonService: ApPersonService,
+		private apPersonService: ApActorService,
 		private apDbResolverService: ApDbResolverService,
 		private instanceChart: InstanceChart,
 		private apRequestChart: ApRequestChart,

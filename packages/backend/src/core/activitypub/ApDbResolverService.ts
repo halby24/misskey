@@ -10,7 +10,7 @@ import type { Note } from '@/models/entities/Note.js';
 import { bindThis } from '@/decorators.js';
 import { RemoteUser, User } from '@/models/entities/User.js';
 import { getApId } from './type.js';
-import { ApPersonService } from './models/ApPersonService.js';
+import { ApActorService } from './models/ApActorService.js';
 import type { IObject } from './type.js';
 
 export type UriParseResult = {
@@ -48,7 +48,7 @@ export class ApDbResolverService {
 		private userPublickeysRepository: UserPublickeysRepository,
 
 		private userCacheService: UserCacheService,
-		private apPersonService: ApPersonService,
+		private apPersonService: ApActorService,
 	) {
 		this.publicKeyCache = new Cache<UserPublickey | null>(Infinity);
 		this.publicKeyByUserIdCache = new Cache<UserPublickey | null>(Infinity);

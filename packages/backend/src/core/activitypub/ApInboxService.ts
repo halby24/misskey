@@ -28,7 +28,7 @@ import { ApLoggerService } from './ApLoggerService.js';
 import { ApDbResolverService } from './ApDbResolverService.js';
 import { ApResolverService } from './ApResolverService.js';
 import { ApAudienceService } from './ApAudienceService.js';
-import { ApPersonService } from './models/ApPersonService.js';
+import { ApActorService } from './models/ApActorService.js';
 import { ApQuestionService } from './models/ApQuestionService.js';
 import type { Resolver } from './ApResolverService.js';
 import type { IAccept, IAdd, IAnnounce, IBlock, ICreate, IDelete, IFlag, IFollow, ILike, IObject, IReject, IRemove, IUndo, IUpdate } from './type.js';
@@ -74,7 +74,7 @@ export class ApInboxService {
 		private apDbResolverService: ApDbResolverService,
 		private apLoggerService: ApLoggerService,
 		private apNoteService: ApNoteService,
-		private apPersonService: ApPersonService,
+		private apPersonService: ApActorService,
 		private apQuestionService: ApQuestionService,
 		private queueService: QueueService,
 	) {

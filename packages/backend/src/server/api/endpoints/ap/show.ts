@@ -9,7 +9,7 @@ import type { SchemaType } from '@/misc/schema.js';
 import { ApResolverService } from '@/core/activitypub/ApResolverService.js';
 import { ApDbResolverService } from '@/core/activitypub/ApDbResolverService.js';
 import { MetaService } from '@/core/MetaService.js';
-import { ApPersonService } from '@/core/activitypub/models/ApPersonService.js';
+import { ApActorService } from '@/core/activitypub/models/ApActorService.js';
 import { ApNoteService } from '@/core/activitypub/models/ApNoteService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
@@ -97,7 +97,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 		private metaService: MetaService,
 		private apResolverService: ApResolverService,
 		private apDbResolverService: ApDbResolverService,
-		private apPersonService: ApPersonService,
+		private apPersonService: ApActorService,
 		private apNoteService: ApNoteService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
@@ -115,7 +115,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 	 */
 	@bindThis
 	private async fetchAny(uri: string, me: LocalUser | null | undefined): Promise<SchemaType<typeof meta['res']> | null> {
-	// ブロックしてたら中断
+		// ブロックしてたら中断
 		const fetchedMeta = await this.metaService.fetch();
 		if (this.utilityService.isBlockedHost(fetchedMeta.blockedHosts, this.utilityService.extractDbHost(uri))) return null;
 

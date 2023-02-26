@@ -7,7 +7,7 @@ import { toArray, unique } from '@/misc/prelude/array.js';
 import { bindThis } from '@/decorators.js';
 import { isMention } from '../type.js';
 import { ApResolverService, Resolver } from '../ApResolverService.js';
-import { ApPersonService } from './ApPersonService.js';
+import { ApActorService } from './ApActorService.js';
 import type { IObject, IApMention } from '../type.js';
 
 @Injectable()
@@ -17,7 +17,7 @@ export class ApMentionService {
 		private config: Config,
 
 		private apResolverService: ApResolverService,
-		private apPersonService: ApPersonService,
+		private apPersonService: ApActorService,
 	) {
 	}
 

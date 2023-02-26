@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { ApPersonService } from '@/core/activitypub/models/ApPersonService.js';
+import { ApActorService } from '@/core/activitypub/models/ApActorService.js';
 import { GetterService } from '@/server/api/GetterService.js';
 
 export const meta = {
@@ -22,7 +22,7 @@ export const paramDef = {
 export default class extends Endpoint<typeof meta, typeof paramDef> {
 	constructor(
 		private getterService: GetterService,
-		private apPersonService: ApPersonService,
+		private apPersonService: ApActorService,
 	) {
 		super(meta, paramDef, async (ps) => {
 			const user = await this.getterService.getRemoteUser(ps.userId);

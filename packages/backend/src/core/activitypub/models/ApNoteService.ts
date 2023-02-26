@@ -24,7 +24,7 @@ import { ApMfmService } from '../ApMfmService.js';
 import { ApDbResolverService } from '../ApDbResolverService.js';
 import { ApResolverService } from '../ApResolverService.js';
 import { ApAudienceService } from '../ApAudienceService.js';
-import { ApPersonService } from './ApPersonService.js';
+import { ApActorService } from './ApActorService.js';
 import { extractApHashtags } from './tag.js';
 import { ApMentionService } from './ApMentionService.js';
 import { ApQuestionService } from './ApQuestionService.js';
@@ -51,8 +51,8 @@ export class ApNoteService {
 		private apResolverService: ApResolverService,
 
 		// 循環参照のため / for circular dependency
-		@Inject(forwardRef(() => ApPersonService))
-		private apPersonService: ApPersonService,
+		@Inject(forwardRef(() => ApActorService))
+		private apPersonService: ApActorService,
 	
 		private utilityService: UtilityService,
 		private apAudienceService: ApAudienceService,

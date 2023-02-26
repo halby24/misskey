@@ -4,7 +4,7 @@ import type { RemoteUser, User } from '@/models/entities/User.js';
 import { concat, unique } from '@/misc/prelude/array.js';
 import { bindThis } from '@/decorators.js';
 import { getApIds } from './type.js';
-import { ApPersonService } from './models/ApPersonService.js';
+import { ApActorService } from './models/ApActorService.js';
 import type { ApObject } from './type.js';
 import type { Resolver } from './ApResolverService.js';
 
@@ -19,7 +19,7 @@ type AudienceInfo = {
 @Injectable()
 export class ApAudienceService {
 	constructor(
-		private apPersonService: ApPersonService,
+		private apPersonService: ApActorService,
 	) {
 	}
 
