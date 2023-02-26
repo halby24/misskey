@@ -174,6 +174,7 @@ export class ApRequestService {
 	 */
 	@bindThis
 	public async signedGet(url: string, user: { id: User['id'] }) {
+		console.log(url);
 		const keypair = await this.userKeypairStoreService.getUserKeypair(user.id);
 
 		const req = this.createSignedGet({

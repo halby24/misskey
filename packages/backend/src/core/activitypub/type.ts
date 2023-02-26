@@ -299,6 +299,11 @@ export interface IFlag extends IActivity {
 	type: 'Flag';
 }
 
+export interface IChannel extends IActor {
+	type: 'Group',
+	image?: IApImage | null,
+}
+
 export const isCreate = (object: IObject): object is ICreate => getApType(object) === 'Create';
 export const isDelete = (object: IObject): object is IDelete => getApType(object) === 'Delete';
 export const isUpdate = (object: IObject): object is IUpdate => getApType(object) === 'Update';

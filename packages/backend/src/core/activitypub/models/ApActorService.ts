@@ -224,38 +224,6 @@ export class ApActorService implements OnModuleInit {
 	}
 
 	/**
-	 * Groupをフェッチします。
-	 *
-	 * Misskeyに対象のGroupが登録されていればそれを返します。
-	 */
-	@bindThis
-	public async fetchGroup(uri: string, resolver?: Resolver): Promise<User | null> {
-		if (typeof uri !== 'string') throw new Error('uri is not string');
-
-		const cached = this.userCacheService.uriPersonCache.get(uri);
-		if (cached) return cached;
-
-		// URIがこのサーバーを指しているならデータベースからフェッチ
-		if (uri.startsWith(this.config.url + '/')) {
-			const id = uri.split('/').pop();
-			const u = await this.usersRepository.findOneBy({ id });
-			if (u) this.userCacheService.uriPersonCache.set(uri, u);
-			return u;
-		}
-
-		//#region このサーバーに既に登録されていたらそれを返す
-		const exist = await this.usersRepository.findOneBy({ uri });
-
-		if (exist) {
-			this.userCacheService.uriPersonCache.set(uri, exist);
-			return exist;
-		}
-		//#endregion
-
-		return null;
-	}
-
-	/**
 	 * Personを作成します。
 	 */
 	@bindThis

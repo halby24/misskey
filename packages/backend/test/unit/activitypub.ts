@@ -6,7 +6,7 @@ import { Test } from '@nestjs/testing';
 import { jest } from '@jest/globals';
 
 import { ApNoteService } from '@/core/activitypub/models/ApNoteService.js';
-import { ApPersonService } from '@/core/activitypub/models/ApPersonService.js';
+import { ApActorService } from '@/core/activitypub/models/ApActorService.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { CoreModule } from '@/core/CoreModule.js';
 import { FederatedInstanceService } from '@/core/FederatedInstanceService.js';
@@ -15,7 +15,7 @@ import { MockResolver } from '../misc/mock-resolver.js';
 
 describe('ActivityPub', () => {
 	let noteService: ApNoteService;
-	let personService: ApPersonService;
+	let actorService: ApActorService;
 	let resolver: MockResolver;
 
 	beforeEach(async () => {
@@ -27,7 +27,7 @@ describe('ActivityPub', () => {
 		app.enableShutdownHooks();
 
 		noteService = app.get<ApNoteService>(ApNoteService);
-		personService = app.get<ApPersonService>(ApPersonService);
+		actorService = app.get<ApActorService>(ApActorService);
 		resolver = new MockResolver(await app.resolve<LoggerService>(LoggerService));
 
 		// Prevent ApPersonService from fetching instance, as it causes Jest import-after-test error
@@ -38,38 +38,56 @@ describe('ActivityPub', () => {
 	describe('Parse minimum object', () => {
 		const host = 'https://host1.test';
 		const preferredUsername = `${rndstr('A-Z', 4)}${rndstr('a-z', 4)}`;
-		const actorId = `${host}/users/${preferredUsername.toLowerCase()}`;
+		const personActorId = `${host}/users/${preferredUsername.toLowerCase()}`;
 
-		const actor = {
+		const person = {
 			'@context': 'https://www.w3.org/ns/activitystreams',
-			id: actorId,
+			id: personActorId,
 			type: 'Person',
 			preferredUsername,
-			inbox: `${actorId}/inbox`,
-			outbox: `${actorId}/outbox`,
+			inbox: `${personActorId}/inbox`,
+			outbox: `${personActorId}/outbox`,
+		};
+
+		const groupActorId = `${host}/channels/${rndstr('0-9a-z', 8)}`;
+		const group = {
+			'@context': 'https://www.w3.org/ns/activitystreams',
+			id: groupActorId,
+			type: 'Group',
+			inbox: `${groupActorId}/inbox`,
+			outbox: `${groupActorId}/outbox`,
 		};
 
 		const post = {
 			'@context': 'https://www.w3.org/ns/activitystreams',
 			id: `${host}/users/${rndstr('0-9a-z', 8)}`,
 			type: 'Note',
-			attributedTo: actor.id,
+			attributedTo: person.id,
 			to: 'https://www.w3.org/ns/activitystreams#Public',
 			content: 'あ',
 		};
 
-		test('Minimum Actor', async () => {
-			resolver._register(actor.id, actor);
+		test('Minimum Person', async () => {
+			resolver._register(person.id, person);
 
-			const user = await personService.createPerson(actor.id, resolver);
+			const user = await actorService.createPerson(person.id, resolver);
 
-			assert.deepStrictEqual(user.uri, actor.id);
-			assert.deepStrictEqual(user.username, actor.preferredUsername);
-			assert.deepStrictEqual(user.inbox, actor.inbox);
+			assert.deepStrictEqual(user.uri, person.id);
+			assert.deepStrictEqual(user.username, person.preferredUsername);
+			assert.deepStrictEqual(user.inbox, person.inbox);
+		});
+
+		test('Minimum Group', async () => {
+			resolver._register(group.id, group);
+
+			const channel = await actorService.createGroup(group.id, resolver);
+
+			assert.deepStrictEqual(channel.uri, group.id);
+			assert.deepStrictEqual(channel.inbox, group.inbox);
 		});
 
 		test('Minimum Note', async () => {
-			resolver._register(actor.id, actor);
+			resolver._register(person.id, person);
 			resolver._register(post.id, post);
 
 			const note = await noteService.createNote(post.id, resolver, true);
@@ -100,7 +118,7 @@ describe('ActivityPub', () => {
 		test('Actor', async () => {
 			resolver._register(actor.id, actor);
 
-			const user = await personService.createPerson(actor.id, resolver);
+			const user = await actorService.createPerson(actor.id, resolver);
 
 			assert.deepStrictEqual(user.name, actor.name.substr(0, 128));
 		});

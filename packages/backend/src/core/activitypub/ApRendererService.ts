@@ -19,11 +19,11 @@ import { MfmService } from '@/core/MfmService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import type { UserKeypair } from '@/models/entities/UserKeypair.js';
-import type { UsersRepository, UserProfilesRepository, NotesRepository, DriveFilesRepository, EmojisRepository, PollsRepository } from '@/models/index.js';
+import type { UsersRepository, UserProfilesRepository, NotesRepository, DriveFilesRepository, EmojisRepository, PollsRepository, Channel } from '@/models/index.js';
 import { bindThis } from '@/decorators.js';
 import { LdSignatureService } from './LdSignatureService.js';
 import { ApMfmService } from './ApMfmService.js';
-import type { IAccept, IActivity, IAdd, IAnnounce, IApDocument, IApEmoji, IApHashtag, IApImage, IApMention, IBlock, ICreate, IDelete, IFlag, IFollow, IKey, ILike, IObject, IPost, IQuestion, IReject, IRemove, ITombstone, IUndo, IUpdate } from './type.js';
+import type { IAccept, IActivity, IAdd, IAnnounce, IApDocument, IApEmoji, IApHashtag, IApImage, IApMention, IBlock, IChannel, ICreate, IDelete, IFlag, IFollow, IKey, ILike, IObject, IPost, IQuestion, IReject, IRemove, ITombstone, IUndo, IUpdate } from './type.js';
 import type { IIdentifier } from './models/identifier.js';
 
 @Injectable()
@@ -505,6 +505,21 @@ export class ApRendererService {
 		}
 
 		return person;
+	}
+
+	@bindThis
+	public renderChannel(channel: Channel): IChannel {
+		const id = `${this.config.url}/channels/${channel.id}`;
+
+		return {
+			type: 'Group',
+			name: channel.name,
+			inbox: `${id}/inbox`,
+			outbox: `${id}/outbox`,
+			sharedInbox: `${this.config.url}/inbox`,
+			endpoints: { sharedInbox: `${this.config.url}/inbox` },
+			image: channel.banner ? this.renderImage(channel.banner) : null,
+		};
 	}
 
 	@bindThis

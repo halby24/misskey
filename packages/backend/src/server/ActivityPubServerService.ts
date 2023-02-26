@@ -6,7 +6,7 @@ import { Brackets, In, IsNull, LessThan, Not } from 'typeorm';
 import accepts from 'accepts';
 import vary from 'vary';
 import { DI } from '@/di-symbols.js';
-import type { FollowingsRepository, NotesRepository, EmojisRepository, NoteReactionsRepository, UserProfilesRepository, UserNotePiningsRepository, UsersRepository } from '@/models/index.js';
+import type { FollowingsRepository, NotesRepository, EmojisRepository, NoteReactionsRepository, UserProfilesRepository, UserNotePiningsRepository, UsersRepository, ChannelsRepository } from '@/models/index.js';
 import * as url from '@/misc/prelude/url.js';
 import type { Config } from '@/config.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
@@ -53,6 +53,9 @@ export class ActivityPubServerService {
 
 		@Inject(DI.followingsRepository)
 		private followingsRepository: FollowingsRepository,
+
+		@Inject(DI.channelsRepository)
+		private channelsRepository: ChannelsRepository,
 
 		private utilityService: UtilityService,
 		private userEntityService: UserEntityService,
@@ -637,6 +640,34 @@ export class ActivityPubServerService {
 			reply.header('Cache-Control', 'public, max-age=180');
 			this.setResponseType(request, reply);
 			return (this.apRendererService.addContext(this.apRendererService.renderFollow(follower, followee)));
+		});
+
+		// channel
+		fastify.get<{ Params: { channel: string; } }>('/channels/:channel', { constraints: { apOrHtml: 'ap' } }, async (request, reply) => {
+			vary(reply.raw, 'Accept');
+	
+			const channel = await this.channelsRepository.findOneBy({
+				id: request.params.channel,
+			});
+
+			if (channel == null) {
+				reply.code(404);
+				return;
+			}
+
+			// リモートだったらリダイレクト
+			// if (note.userHost != null) {
+			// 	if (note.uri == null || this.utilityService.isSelfHost(note.userHost)) {
+			// 		reply.code(500);
+			// 		return;
+			// 	}
+			// 	reply.redirect(note.uri);
+			// 	return;
+			// }
+
+			reply.header('Cache-Control', 'public, max-age=180');
+			this.setResponseType(request, reply);
+			return this.apRendererService.addContext(await this.apRendererService.renderChannel(channel));
 		});
 
 		done();

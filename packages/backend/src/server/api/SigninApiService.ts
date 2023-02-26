@@ -149,7 +149,7 @@ export class SigninApiService {
 		}
 
 		if (token) {
-			if (!same) {
+			if (!same || profile.twoFactorSecret === null) {
 				return await fail(403, {
 					id: '932c904e-9460-45b7-9ce6-7ed33be7eb2c',
 				});
