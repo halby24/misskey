@@ -23,7 +23,7 @@ import type { UsersRepository, UserProfilesRepository, NotesRepository, DriveFil
 import { bindThis } from '@/decorators.js';
 import { LdSignatureService } from './LdSignatureService.js';
 import { ApMfmService } from './ApMfmService.js';
-import type { IAccept, IActivity, IAdd, IAnnounce, IApDocument, IApEmoji, IApHashtag, IApImage, IApMention, IBlock, IChannel, ICreate, IDelete, IFlag, IFollow, IKey, ILike, IObject, IPost, IQuestion, IReject, IRemove, ITombstone, IUndo, IUpdate } from './type.js';
+import type { IAccept, IActivity, IAdd, IAnnounce, IApDocument, IApEmoji, IApHashtag, IApImage, IApMention, IBlock, IGroup, ICreate, IDelete, IFlag, IFollow, IKey, ILike, IObject, IPerson, IPost, IQuestion, IReject, IRemove, ITombstone, IUndo, IUpdate } from './type.js';
 import type { IIdentifier } from './models/identifier.js';
 
 @Injectable()
@@ -242,15 +242,15 @@ export class ApRendererService {
 	}
 
 	@bindThis
-	public renderKey(user: LocalUser, key: UserKeypair, postfix?: string): IKey {
+	public renderKey(id: string, key: UserKeypair, postfix?: string): IKey {
 		return {
-			id: `${this.config.url}/users/${user.id}${postfix ?? '/publickey'}`,
+			id: `${this.config.url}/users/${id}${postfix ?? '/publickey'}`,
 			type: 'Key',
-			owner: `${this.config.url}/users/${user.id}`,
+			owner: `${this.config.url}/users/${id}`,
 			publicKeyPem: createPublicKey(key.publicKey).export({
 				type: 'spki',
 				format: 'pem',
-			}),
+			}) as string,
 		};
 	}
 
@@ -431,7 +431,7 @@ export class ApRendererService {
 	}
 
 	@bindThis
-	public async renderPerson(user: LocalUser) {
+	public async renderPerson(user: LocalUser): Promise<IPerson> {
 		const id = `${this.config.url}/users/${user.id}`;
 		const isSystem = !!user.username.match(/\./);
 
@@ -491,10 +491,10 @@ export class ApRendererService {
 			tag,
 			manuallyApprovesFollowers: user.isLocked,
 			discoverable: !!user.isExplorable,
-			publicKey: this.renderKey(user, keypair, '#main-key'),
+			publicKey: this.renderKey(user.id, keypair, '#main-key'),
 			isCat: user.isCat,
 			attachment: attachment.length ? attachment : undefined,
-		} as any;
+		} as IPerson;
 
 		if (profile.birthday) {
 			person['vcard:bday'] = profile.birthday;
@@ -508,8 +508,9 @@ export class ApRendererService {
 	}
 
 	@bindThis
-	public renderChannel(channel: Channel): IChannel {
+	public async renderChannel(channel: Channel): Promise<IGroup> {
 		const id = `${this.config.url}/channels/${channel.id}`;
+		const keypair = await this.userKeypairStoreService.getUserKeypair(id);
 
 		return {
 			type: 'Group',
@@ -519,6 +520,7 @@ export class ApRendererService {
 			sharedInbox: `${this.config.url}/inbox`,
 			endpoints: { sharedInbox: `${this.config.url}/inbox` },
 			image: channel.banner ? this.renderImage(channel.banner) : null,
+			publicKey: this.renderKey(id, keypair, '#main-key'),
 		};
 	}
 

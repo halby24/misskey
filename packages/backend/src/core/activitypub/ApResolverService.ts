@@ -100,19 +100,30 @@ export class Resolver {
 			this.user = await this.instanceActorService.getInstanceActor();
 		}
 
-		const object = (this.user
+		const obj = (this.user
 			? await this.apRequestService.signedGet(value, this.user) as IObject
 			: await this.httpRequestService.getJson(value, 'application/activity+json, application/ld+json')) as IObject;
 
-		if (object == null || (
-			Array.isArray(object['@context']) ?
-				!(object['@context'] as unknown[]).includes('https://www.w3.org/ns/activitystreams') :
-				object['@context'] !== 'https://www.w3.org/ns/activitystreams'
-		)) {
-			throw new Error('invalid response');
+		let isObjValid = false;
+		if (obj['@context'] != null) {
+			const context = obj['@context'];
+			if (Array.isArray(context)) {
+				const ctx_arr = obj['@context'] as unknown[];
+				if (ctx_arr.includes('https://www.w3.org/ns/activitystreams')) {
+					isObjValid = true;
+				}
+			} else {
+				if (context === 'https://www.w3.org/ns/activitystreams') {
+					isObjValid = true;
+				}
+			}
 		}
 
-		return object;
+		if (!isObjValid) {
+			throw new Error('invalid response');
+		}
+		
+		return obj;
 	}
 
 	@bindThis

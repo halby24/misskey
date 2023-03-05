@@ -68,7 +68,7 @@ export class RemoteUserResolveService {
 			const self = await this.resolveSelf(acctLower);
 	
 			this.logger.succ(`return new remote user: ${chalk.magenta(acctLower)}`);
-			return await this.apPersonService.createPerson(self.href);
+			return await this.apPersonService.createUser(self.href);
 		}
 	
 		// ユーザー情報が古い場合は、WebFilgerからやりなおして返す

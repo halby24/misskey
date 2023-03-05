@@ -46,6 +46,14 @@ export class Channel {
 	})
 	public description: string | null;
 
+	// Ap対応で追加
+	@Index()
+	@Column('varchar', {
+		length: 512, nullable: true,
+		comment: 'The URI of the Channel. It will be null if the origin of the channel is local.',
+	})
+	public uri: string | null;
+
 	@Column({
 		...id(),
 		nullable: true,
@@ -72,4 +80,9 @@ export class Channel {
 		comment: 'The count of users.',
 	})
 	public usersCount: number;
+}
+
+export type RemoteChannel = Channel & {
+	host: string;
+	uri: string;
 }

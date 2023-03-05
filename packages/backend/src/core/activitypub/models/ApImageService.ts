@@ -10,8 +10,10 @@ import { DB_MAX_IMAGE_COMMENT_LENGTH } from '@/const.js';
 import { DriveService } from '@/core/DriveService.js';
 import type Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
-import { ApResolverService } from '../ApResolverService.js';
+import { ApResolverService, Resolver } from '../ApResolverService.js';
 import { ApLoggerService } from '../ApLoggerService.js';
+import type { IApImage, IObject } from '../type.js';
+import { StatusError } from '@/misc/status-error.js';
 
 @Injectable()
 export class ApImageService {
@@ -49,7 +51,7 @@ export class ApImageService {
 		}
 
 		if (!image.url.startsWith('https://')) {
-			throw new Error('invalid image: unexpected shcema of url: ' + image.url);
+			throw new Error('invalid image: unexpected schema of url: ' + image.url);
 		}
 
 		this.logger.info(`Creating the Image: ${image.url}`);

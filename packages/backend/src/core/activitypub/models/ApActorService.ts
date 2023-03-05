@@ -3,10 +3,12 @@ import promiseLimit from 'promise-limit';
 import { DataSource } from 'typeorm';
 import { ModuleRef } from '@nestjs/core';
 import { DI } from '@/di-symbols.js';
-import type { FollowingsRepository, InstancesRepository, UserProfilesRepository, UserPublickeysRepository, UsersRepository } from '@/models/index.js';
+import type { ChannelsRepository, FollowingsRepository, InstancesRepository, UserProfilesRepository, UserPublickeysRepository, UsersRepository } from '@/models/index.js';
 import type { Config } from '@/config.js';
 import type { RemoteUser } from '@/models/entities/User.js';
+import type { RemoteChannel } from '@/models/entities/Channel.js';
 import { User } from '@/models/entities/User.js';
+import { Channel } from '@/models/entities/Channel.js';
 import { truncate } from '@/misc/truncate.js';
 import type { UserCacheService } from '@/core/UserCacheService.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
@@ -29,9 +31,12 @@ import { UserNotePining } from '@/models/entities/UserNotePining.js';
 import { StatusError } from '@/misc/status-error.js';
 import type { UtilityService } from '@/core/UtilityService.js';
 import type { UserEntityService } from '@/core/entities/UserEntityService.js';
+import { DriveService } from '@/core/DriveService.js';
+import { InstanceActorService } from '@/core/InstanceActorService.js';
 import { bindThis } from '@/decorators.js';
-import { getApId, getApType, getOneApHrefNullable, isActor, isCollection, isCollectionOrOrderedCollection, isPropertyValue } from '../type.js';
+import { getApId, getApType, getOneApHrefNullable, isPersonOrService, isCollection, isCollectionOrOrderedCollection, isPropertyValue, isGroup } from '../type.js';
 import { extractApHashtags } from './tag.js';
+import type { IActor, IObject } from '../type.js';
 import type { OnModuleInit } from '@nestjs/common';
 import type { ApNoteService } from './ApNoteService.js';
 import type { ApMfmService } from '../ApMfmService.js';
@@ -39,7 +44,6 @@ import type { ApResolverService, Resolver } from '../ApResolverService.js';
 import type { ApLoggerService } from '../ApLoggerService.js';
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import type { ApImageService } from './ApImageService.js';
-import type { IActor, IObject } from '../type.js';
 
 const nameLength = 128;
 const summaryLength = 2048;
@@ -62,6 +66,8 @@ export class ApActorService implements OnModuleInit {
 	private usersChart: UsersChart;
 	private instanceChart: InstanceChart;
 	private apLoggerService: ApLoggerService;
+	private driveService: DriveService;
+	private instanceActorService : InstanceActorService;
 	private logger: Logger;
 
 	constructor(
@@ -87,6 +93,9 @@ export class ApActorService implements OnModuleInit {
 
 		@Inject(DI.followingsRepository)
 		private followingsRepository: FollowingsRepository,
+
+		@Inject(DI.channelsRepository)
+		private channelsRepository: ChannelsRepository,
 
 		//private utilityService: UtilityService,
 		//private userEntityService: UserEntityService,
@@ -124,6 +133,8 @@ export class ApActorService implements OnModuleInit {
 		this.usersChart = this.moduleRef.get('UsersChart');
 		this.instanceChart = this.moduleRef.get('InstanceChart');
 		this.apLoggerService = this.moduleRef.get('ApLoggerService');
+		this.driveService = this.moduleRef.get('DriveService');
+		this.instanceActorService = this.moduleRef.get('InstanceActorService');
 		this.logger = this.apLoggerService.logger;
 	}
 
@@ -140,7 +151,7 @@ export class ApActorService implements OnModuleInit {
 			throw new Error('invalid Actor: object is null');
 		}
 
-		if (!isActor(x)) {
+		if (!isPersonOrService(x)) {
 			throw new Error(`invalid Actor type '${x.type}'`);
 		}
 
@@ -224,25 +235,21 @@ export class ApActorService implements OnModuleInit {
 	}
 
 	/**
-	 * Personを作成します。
+	 * URLに基づきActivityPub Person ObjectからUserを作成します。
 	 */
 	@bindThis
-	public async createPerson(uri: string, resolver?: Resolver): Promise<User> {
-		if (typeof uri !== 'string') throw new Error('uri is not string');
-
-		if (uri.startsWith(this.config.url)) {
-			throw new StatusError('cannot resolve local user', 400, 'cannot resolve local user');
-		}
-
-		if (resolver == null) resolver = this.apResolverService.createResolver();
-
-		const object = await resolver.resolve(uri) as any;
+	public async createUser(uri: string, resolver?: Resolver): Promise<User> {
+		const object = await this.getIObjectFromUri(uri, resolver);
 
 		const person = this.validateActor(object, uri);
 
+		if (!isPersonOrService(person)) {
+			throw new Error('Object is not person object');
+		}
+
 		this.logger.info(`Creating the Person: ${person.id}`);
 
-		const host = this.utilityService.toPuny(new URL(object.id).hostname);
+		const host = this.utilityService.toPuny(new URL(object.id!).hostname);
 
 		const { fields } = this.analyzeAttachments(person.attachment ?? []);
 
@@ -353,26 +360,120 @@ export class ApActorService implements OnModuleInit {
 			bannerId,
 		});
 
-	user!.avatarId = avatarId;
-	user!.bannerId = bannerId;
-	//#endregion
+		user!.avatarId = avatarId;
+		user!.bannerId = bannerId;
+		//#endregion
 
-	//#region カスタム絵文字取得
-	const emojis = await this.apNoteService.extractEmojis(person.tag ?? [], host).catch(err => {
-		this.logger.info(`extractEmojis: ${err}`);
-		return [] as Emoji[];
-	});
+		//#region カスタム絵文字取得
+		const emojis = await this.apNoteService.extractEmojis(person.tag ?? [], host).catch(err => {
+			this.logger.info(`extractEmojis: ${err}`);
+			return [] as Emoji[];
+		});
 
-	const emojiNames = emojis.map(emoji => emoji.name);
+		const emojiNames = emojis.map(emoji => emoji.name);
 
-	await this.usersRepository.update(user!.id, {
-		emojis: emojiNames,
-	});
-	//#endregion
+		await this.usersRepository.update(user!.id, {
+			emojis: emojiNames,
+		});
+		//#endregion
 
-	await this.updateFeatured(user!.id, resolver).catch(err => this.logger.error(err));
+		await this.updateFeatured(user!.id, resolver).catch(err => this.logger.error(err));
 
-	return user!;
+		return user!;
+	}
+
+	/**
+	 * URLに基づきActivityPub Group ObjectからChannelを作成します。
+	 */
+	@bindThis
+	public async createChannel(uri: string, resolver?: Resolver): Promise<Channel> {
+		const object = await this.getIObjectFromUri(uri, resolver);
+
+		const group = this.validateActor(object, uri);
+
+		if (!isGroup(group)) {
+			throw new Error('Object is not group object');
+		}
+
+		this.logger.info(`Creating the Channel: ${group.id}`);
+
+		const host = this.utilityService.toPuny(new URL(object.id!).hostname);
+
+		// const { fields } = this.analyzeAttachments(group.attachment ?? []);
+
+		// const tags = extractApHashtags(group.tag).map(tag => normalizeForSearch(tag)).splice(0, 32);
+
+		const url = getOneApHrefNullable(group.url);
+
+		if (url && !url.startsWith('https://')) {
+			throw new Error('unexpected shcema of person url: ' + url);
+		}
+
+		//#region ヘッダー画像をフェッチ
+		let bannerId: string | null = null;
+		const img_url = group.image?.url?.toString();
+		if (img_url != null && img_url.length > 0) {
+			// とりあえずInstanceActorのDriveに上げる処理にしている
+			const instanceActor = await this.instanceActorService.getInstanceActor();
+			const banner = await this.driveService.uploadFromUrl({
+				url: img_url,
+				user: instanceActor,
+			});
+			bannerId = banner.id;
+		}
+		//#endregion
+
+		// Create user
+		let channel: RemoteChannel;
+		try {
+			// endpointsの方では特に何もしていなかったのでtransactionは使っていない (ええんか？)
+			channel = await this.channelsRepository.insert({
+				id: this.idService.genId(),
+				createdAt: new Date(),
+				userId: group.userId,
+				name: group.name,
+				description: group.description,
+				bannerId,
+			} as Channel).then(x => this.channelsRepository.findOneByOrFail(x.identifiers[0])) as RemoteChannel;
+		} catch (e) {
+		// duplicate key error
+			if (isDuplicateKeyValueError(e)) {
+			// /users/@a => /users/:id のように入力がaliasなときにエラーになることがあるのを対応
+				const c = await this.channelsRepository.findOneBy({
+					uri: group.id,
+				});
+
+				if (c) {
+					channel = c as RemoteChannel;
+				} else {
+					throw new Error('already registered');
+				}
+			} else {
+				this.logger.error(e instanceof Error ? e : new Error(e as string));
+				throw e;
+			}
+		}
+
+		// Register host
+		this.federatedInstanceService.fetch(host).then(i => {
+			this.fetchInstanceMetadataService.fetchInstanceMetadata(i);
+		});
+
+		return channel!;
+	}
+
+	@bindThis
+	private async getIObjectFromUri(uri: string, resolver?: Resolver): Promise<IObject> {
+		if (typeof uri !== 'string') throw new Error('uri is not string');
+
+		if (uri.startsWith(this.config.url)) {
+			throw new StatusError('cannot resolve local user', 400, 'cannot resolve local user');
+		}
+
+		if (resolver == null) resolver = this.apResolverService.createResolver();
+
+		const object = await resolver.resolve(uri);
+		return object;
 	}
 
 	/**
@@ -513,7 +614,7 @@ export class ApActorService implements OnModuleInit {
 
 		// リモートサーバーからフェッチしてきて登録
 		if (resolver == null) resolver = this.apResolverService.createResolver();
-		return await this.createPerson(uri, resolver);
+		return await this.createUser(uri, resolver);
 	}
 
 	@bindThis

@@ -149,8 +149,9 @@ export const isTombstone = (object: IObject): object is ITombstone =>
 
 export const validActor = ['Person', 'Service', 'Group', 'Organization', 'Application'];
 
-export const isActor = (object: IObject): object is IActor =>
-	validActor.includes(getApType(object));
+// BotはServiceなので、とりあえずまとめて扱う
+export const isPersonOrService = (object: IObject): object is (IPerson | IService) => getApType(object) === 'Person' || getApType(object) === 'Service';
+export const isGroup = (object: IObject): object is IGroup => getApType(object) === 'Group';
 
 export interface IActor extends IObject {
 	type: 'Person' | 'Service' | 'Organization' | 'Group' | 'Application';
@@ -160,10 +161,7 @@ export interface IActor extends IObject {
 	discoverable?: boolean;
 	inbox: string;
 	sharedInbox?: string;	// 後方互換性のため
-	publicKey?: {
-		id: string;
-		publicKeyPem: string;
-	};
+	publicKey?: IKey,
 	followers?: string | ICollection | IOrderedCollection;
 	following?: string | ICollection | IOrderedCollection;
 	featured?: string | IOrderedCollection;
@@ -173,6 +171,21 @@ export interface IActor extends IObject {
 	};
 	'vcard:bday'?: string;
 	'vcard:Address'?: string;
+}
+
+export interface IPerson extends IActor {
+	type: 'Person'
+}
+
+export interface IService extends IActor {
+	type: 'Service'
+}
+
+export interface IGroup extends IActor {
+	type: 'Group',
+	image?: IApImage | null,
+	userId?: string,
+	description?: string,
 }
 
 export const isCollection = (object: IObject): object is ICollection =>
@@ -228,7 +241,7 @@ export const isEmoji = (object: IObject): object is IApEmoji =>
 export interface IKey extends IObject {
 	type: 'Key';
 	owner: string;
-	publicKeyPem: string | Buffer;
+	publicKeyPem: string;
 }
 
 export interface IApDocument extends IObject {
@@ -240,6 +253,7 @@ export interface IApDocument extends IObject {
 export interface IApImage extends IObject {
 	type: 'Image';
 	name: string | null;
+	userId?: string;
 }
 
 export interface ICreate extends IActivity {
@@ -297,11 +311,6 @@ export interface IBlock extends IActivity {
 
 export interface IFlag extends IActivity {
 	type: 'Flag';
-}
-
-export interface IChannel extends IActor {
-	type: 'Group',
-	image?: IApImage | null,
 }
 
 export const isCreate = (object: IObject): object is ICreate => getApType(object) === 'Create';

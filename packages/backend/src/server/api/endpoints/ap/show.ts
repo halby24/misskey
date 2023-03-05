@@ -4,7 +4,9 @@ import { Endpoint } from '@/server/api/endpoint-base.js';
 import type { UsersRepository, NotesRepository } from '@/models/index.js';
 import type { Note } from '@/models/entities/Note.js';
 import type { LocalUser, User } from '@/models/entities/User.js';
-import { isActor, isPost, getApId } from '@/core/activitypub/type.js';
+import type { Channel } from '@/models/entities/Channel.js';
+import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
+import { isPersonOrService, isGroup, isPost, getApId, IObject } from '@/core/activitypub/type.js';
 import type { SchemaType } from '@/misc/schema.js';
 import { ApResolverService } from '@/core/activitypub/ApResolverService.js';
 import { ApDbResolverService } from '@/core/activitypub/ApDbResolverService.js';
@@ -60,6 +62,21 @@ export const meta = {
 					type: {
 						type: 'string',
 						optional: false, nullable: false,
+						enum: ['Channel'],
+					},
+					object: {
+						type: 'object',
+						optional: false, nullable: false,
+						ref: 'Channel',
+					},
+				},
+			},
+			{
+				type: 'object',
+				properties: {
+					type: {
+						type: 'string',
+						optional: false, nullable: false,
 						enum: ['Note'],
 					},
 					object: {
@@ -93,11 +110,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 
 		private utilityService: UtilityService,
 		private userEntityService: UserEntityService,
+		private channelEntityService: ChannelEntityService,
 		private noteEntityService: NoteEntityService,
 		private metaService: MetaService,
 		private apResolverService: ApResolverService,
 		private apDbResolverService: ApDbResolverService,
-		private apPersonService: ApActorService,
+		private apActorService: ApActorService,
 		private apNoteService: ApNoteService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
@@ -114,7 +132,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 	 * URIからUserかNoteを解決する
 	 */
 	@bindThis
-	private async fetchAny(uri: string, me: LocalUser | null | undefined): Promise<SchemaType<typeof meta['res']> | null> {
+	private async fetchAny(uri: string, me: LocalUser | null | undefined): Promise<SchemaType<typeof meta.res> | null> {
 		// ブロックしてたら中断
 		const fetchedMeta = await this.metaService.fetch();
 		if (this.utilityService.isBlockedHost(fetchedMeta.blockedHosts, this.utilityService.extractDbHost(uri))) return null;
@@ -127,32 +145,49 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 
 		// リモートから一旦オブジェクトフェッチ
 		const resolver = this.apResolverService.createResolver();
-		const object = await resolver.resolve(uri) as any;
+		const object = await resolver.resolve(uri);
 
 		// /@user のような正規id以外で取得できるURIが指定されていた場合、ここで初めて正規URIが確定する
 		// これはDBに存在する可能性があるため再度DB検索
 		if (uri !== object.id) {
 			local = await this.mergePack(me, ...await Promise.all([
-				this.apDbResolverService.getUserFromApId(object.id),
-				this.apDbResolverService.getNoteFromApId(object.id),
+				this.apDbResolverService.getUserFromApId(object.id!),
+				this.apDbResolverService.getNoteFromApId(object.id!),
 			]));
 			if (local != null) return local;
 		}
 
+		const createUserOrChannel = async (o: IObject): Promise<User | Channel | null> => {
+			if (isPersonOrService(o)) {
+				return await this.apActorService.createUser(getApId(object));
+			} else if (isGroup(o)) {
+				return await this.apActorService.createChannel(getApId(object));
+			} else {
+				return null;
+			}
+		};
+
 		return await this.mergePack(
 			me,
-			isActor(object) ? await this.apPersonService.createPerson(getApId(object)) : null,
+			await createUserOrChannel(object),
 			isPost(object) ? await this.apNoteService.createNote(getApId(object), undefined, true) : null,
 		);
 	}
 
 	@bindThis
-	private async mergePack(me: LocalUser | null | undefined, user: User | null | undefined, note: Note | null | undefined): Promise<SchemaType<typeof meta.res> | null> {
+	private async mergePack(me: LocalUser | null | undefined, user: User | Channel | null | undefined, note: Note | null | undefined): Promise<SchemaType<typeof meta.res> | null> {
 		if (user != null) {
-			return {
-				type: 'User',
-				object: await this.userEntityService.pack(user, me, { detail: true }),
-			};
+			if ('username' in user) { // ちょっと判定ガバい
+				return {
+					type: 'User',
+					object: await this.userEntityService.pack(user as User, me, { detail: true }),
+				};
+			} else {
+				return {
+					type: 'Channel',
+					object: await this.channelEntityService.pack(user as Channel, me),
+				};
+			}
 		} else if (note != null) {
 			try {
 				const object = await this.noteEntityService.pack(note, me, { detail: true });
