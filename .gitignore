@@ -8,6 +8,7 @@
 # Node.js
 node_modules
 report.*.json
+.pnpm-store
 
 # Yarn
 .yarn/*
@@ -59,3 +60,4 @@ ormconfig.json
 *.blend3
 *.blend4
 *.blend5
+
