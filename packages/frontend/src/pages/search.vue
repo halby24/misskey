@@ -8,10 +8,20 @@
 		<MkTab v-model="searchType" style="margin-bottom: var(--margin);" @update:model-value="search()">
 			<option value="note">{{ i18n.ts.note }}</option>
 			<option value="user">{{ i18n.ts.user }}</option>
+			<option value="channel">{{ i18n.ts.channel }}</option>
 		</MkTab>
 
 		<div v-if="searchType === 'note'">
 			<MkNotes v-if="searchQuery" ref="notes" :pagination="notePagination"/>
+		</div>
+		<div v-else-if="searchType === 'user'">
+			<MkRadios v-model="searchOrigin" style="margin-bottom: var(--margin);" @update:model-value="search()">
+				<option value="combined">{{ i18n.ts.all }}</option>
+				<option value="local">{{ i18n.ts.local }}</option>
+				<option value="remote">{{ i18n.ts.remote }}</option>
+			</MkRadios>
+
+			<MkUserList v-if="searchQuery" ref="users" :pagination="userPagination"/>
 		</div>
 		<div v-else>
 			<MkRadios v-model="searchOrigin" style="margin-bottom: var(--margin);" @update:model-value="search()">
@@ -20,7 +30,9 @@
 				<option value="remote">{{ i18n.ts.remote }}</option>
 			</MkRadios>
 
-			<MkUserList v-if="searchQuery" ref="users" :pagination="userPagination"/>
+			<MkPagination v-if="searchQuery" v-slot="{items}" :pagination="channelPagination">
+				<MkChannelPreview v-for="channelItem in items" :key="channelItem.id" class="_margin" :channel="channelItem"/>
+			</MkPagination>
 		</div>
 	</MkSpacer>
 </MkStickyContainer>
@@ -30,6 +42,8 @@
 import { computed, onMounted } from 'vue';
 import MkNotes from '@/components/MkNotes.vue';
 import MkUserList from '@/components/MkUserList.vue';
+import MkPagination from '@/components/MkPagination.vue';
+import MkChannelPreview from '@/components/MkChannelPreview.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkTab from '@/components/MkTab.vue';
 import MkRadios from '@/components/MkRadios.vue';
@@ -133,6 +147,14 @@ const userPagination = {
 		query: searchQuery,
 		origin: searchOrigin,
 	})),
+};
+const channelPagination = {
+	endpoint: 'channels/search' as const,
+	limit: 5,
+	params: computed(() => ({
+		query: searchQuery,
+		origin: searchOrigin,
+	}))
 };
 
 const headerActions = $computed(() => []);
