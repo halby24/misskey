@@ -54,40 +54,19 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 		@Inject(DI.config)
 		private config: Config,
 	
-		@Inject(DI.notesRepository)
+		@Inject(DI.channelsRepository)
 		private channelsRepository: ChannelsRepository,
 
 		private channelEntityService: ChannelEntityService,
 		private queryService: QueryService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
-			const query = this.queryService.makePaginationQuery(this.channelsRepository.createQueryBuilder('channel'), ps.sinceId, ps.untilId);
+			const query = this.channelsRepository.createQueryBuilder('channel');
 
-			if (ps.userId) {
-				query.andWhere('channel.userId = :userId', { userId: ps.userId });
-			} /* else if (ps.channelId) {
-				query.andWhere('note.channelId = :channelId', { channelId: ps.channelId });
-			} */
-
-			query
-				.andWhere('note.text ILIKE :q', { q: `%${ sqlLikeEscape(ps.query) }%` })
-				.innerJoinAndSelect('note.user', 'user')
-				.leftJoinAndSelect('user.avatar', 'avatar')
-				.leftJoinAndSelect('user.banner', 'banner')
-				.leftJoinAndSelect('note.reply', 'reply')
-				.leftJoinAndSelect('note.renote', 'renote')
-				.leftJoinAndSelect('reply.user', 'replyUser')
-				.leftJoinAndSelect('replyUser.avatar', 'replyUserAvatar')
-				.leftJoinAndSelect('replyUser.banner', 'replyUserBanner')
-				.leftJoinAndSelect('renote.user', 'renoteUser')
-				.leftJoinAndSelect('renoteUser.avatar', 'renoteUserAvatar')
-				.leftJoinAndSelect('renoteUser.banner', 'renoteUserBanner');
-
-			this.queryService.generateVisibilityQuery(query, me);
-			if (me) this.queryService.generateMutedUserQuery(query, me);
-			if (me) this.queryService.generateBlockedUserQuery(query, me);
-
+			query.where('name ILIKE :name', { name: '%' + sqlLikeEscape(ps.query) + '%' });
+			
 			const channels = await query.take(ps.limit).getMany();
+			console.log(channels);
 
 			return await this.channelEntityService.packMany(channels, me);
 		});
