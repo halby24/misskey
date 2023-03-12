@@ -94,6 +94,7 @@ import * as ep___channels_show from './endpoints/channels/show.js';
 import * as ep___channels_timeline from './endpoints/channels/timeline.js';
 import * as ep___channels_unfollow from './endpoints/channels/unfollow.js';
 import * as ep___channels_update from './endpoints/channels/update.js';
+import * as ep___channels_search from './endpoints/channels/search.js';
 import * as ep___charts_activeUsers from './endpoints/charts/active-users.js';
 import * as ep___charts_apRequest from './endpoints/charts/ap-request.js';
 import * as ep___charts_drive from './endpoints/charts/drive.js';
@@ -413,6 +414,7 @@ const eps = [
 	['channels/timeline', ep___channels_timeline],
 	['channels/unfollow', ep___channels_unfollow],
 	['channels/update', ep___channels_update],
+	['channels/search', ep___channels_search],
 	['charts/active-users', ep___charts_activeUsers],
 	['charts/ap-request', ep___charts_apRequest],
 	['charts/drive', ep___charts_drive],

@@ -63,5 +63,15 @@ export class ChannelEntityService {
 			} : {}),
 		};
 	}
+
+	@bindThis
+	public async packMany(
+		channels: Channel[],
+		me?: { id: User['id'] } | null | undefined,
+	): Promise<Packed<'Channel'>[]> {
+		if (channels.length === 0) return [];
+
+		return await Promise.all(channels.map(n => this.pack(n, me)));
+	}
 }
 
