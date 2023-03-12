@@ -66,7 +66,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> {
 			query.where('name ILIKE :name', { name: '%' + sqlLikeEscape(ps.query) + '%' });
 			
 			const channels = await query.take(ps.limit).getMany();
-			console.log(channels);
 
 			return await this.channelEntityService.packMany(channels, me);
 		});
