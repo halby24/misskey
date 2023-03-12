@@ -8,6 +8,8 @@ services:
 
     volumes:
       - ../:/workspace:cached
+      # ↓あとで消す
+      - ../../misskey-js:/workspace/packages/misskey-js:cached
 
     command: sleep infinity
 
@@ -32,6 +34,7 @@ services:
     image: postgres:15-alpine
     networks:
       - internal_network
+      - external_network
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -42,6 +45,8 @@ services:
       test: "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"
       interval: 5s
       retries: 20
+    ports:
+      - "5432:5432"
 
 volumes:
   postgres-data:
